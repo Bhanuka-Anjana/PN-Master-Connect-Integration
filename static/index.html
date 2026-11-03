@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1018">
+  <title>PN Master Connect · Device console</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <aside class="rail" aria-label="Console navigation">
+    <a class="brand" href="#overview" aria-label="PN Master Connect">pn<span>·</span></a>
+    <nav>
+      <a class="rail-link active" href="#overview" aria-label="Overview" title="Overview"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></a>
+      <a class="rail-link" href="#signals" aria-label="Sensor signals" title="Sensor signals"><svg viewBox="0 0 24 24"><path d="M2 12h4l3-8 5 16 3-8h5"/></svg></a>
+      <a class="rail-link" href="#controls" aria-label="Output controls" title="Output controls"><svg viewBox="0 0 24 24"><path d="M7 3v18m10-18v18"/><rect x="4" y="7" width="6" height="5" rx="1"/><rect x="14" y="14" width="6" height="5" rx="1"/></svg></a>
+      <a class="rail-link" href="#activity" aria-label="Activity log" title="Activity log"><svg viewBox="0 0 24 24"><path d="M6 4h15M6 12h15M6 20h15M2 4h.1M2 12h.1M2 20h.1"/></svg></a>
+    </nav>
+    <div class="rail-bottom" title="Local console"><span class="local-dot"></span><span>LOCAL</span></div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar">
+      <div class="wordmark">Master <strong>Connect</strong><span class="separator"></span><span class="console-label">DEVICE CONSOLE</span></div>
+      <div class="topbar-right"><span class="tls-label"><svg viewBox="0 0 20 20"><rect x="4" y="8" width="12" height="9" rx="2"/><path d="M7 8V5a3 3 0 0 1 6 0v3"/></svg> TLS secured</span><span class="clock" id="clock">--:--:--</span><div class="avatar" title="Local operator">OP</div></div>
+    </header>
+
+    <main id="overview">
+      <div class="page-heading"><div><div class="eyebrow">WORKSPACE <span>/</span> MASTER DEVICE</div><h1>Device overview<span class="title-dot">.</span></h1><p>Monitor live signals. Keep every output in control.</p></div><button class="button secondary" id="export-button"><svg viewBox="0 0 20 20"><path d="M10 2v10m-4-4 4 4 4-4M3 13v4h14v-4"/></svg>Export snapshot</button></div>
+
+      <div id="notice" class="notice hidden" role="status"></div>
+
+      <section class="device-strip" aria-label="Device connection">
+        <div class="device-icon"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4m6-4v4M9 18v4m6-4v4M2 9h4m-4 6h4m12-6h4m-4 6h4"/><path d="M10 10h4v4h-4z"/></svg></div>
+        <div class="device-name"><strong id="device-name">Waiting for master</strong><span id="site-name">Awaiting device identity</span></div>
+        <div class="device-divider"></div><div class="device-meta topic-meta"><span class="micro-label">TOPIC PREFIX</span><code id="topic-prefix">Connecting to local server…</code></div>
+        <div class="device-meta message-meta"><span class="micro-label">MESSAGES</span><strong id="message-count">0</strong></div>
+        <div class="connection-group"><span class="badge" id="connection-badge"><i></i>Connecting</span><span id="last-seen">No telemetry yet</span></div>
+      </section>
+
+      <section class="metric-grid" id="signals" aria-label="Sensor summary">
+        <article class="metric-card"><div class="metric-top"><span>Ambient temperature</span><span class="sensor-tag">HDC2010</span></div><div class="metric-body"><div class="metric-value" id="ambient-value">—<small>°C</small></div><canvas class="spark" id="ambient-spark" aria-label="Ambient temperature trend" role="img"></canvas></div><div class="metric-bottom"><span class="metric-note" id="ambient-note">Awaiting telemetry</span><span class="tiny-dot mint"></span></div></article>
+        <article class="metric-card"><div class="metric-top"><span>Relative humidity</span><span class="sensor-tag">HDC2010</span></div><div class="metric-body"><div class="metric-value" id="humidity-value">—<small>% RH</small></div><canvas class="gauge" id="humidity-gauge" aria-label="Relative humidity gauge, 0 to 100 percent" role="img"></canvas></div><div class="metric-bottom"><span class="metric-note" id="humidity-note">Awaiting telemetry</span><span class="tiny-dot blue"></span></div></article>
+        <article class="metric-card"><div class="metric-top"><span>Thermistor temperature</span><span class="sensor-tag">NTC</span></div><div class="metric-body"><div class="metric-value" id="ntc-value">—<small>°C</small></div><canvas class="spark" id="ntc-spark" aria-label="NTC temperature trend" role="img"></canvas></div><div class="metric-bottom"><span class="metric-note" id="ntc-note">Awaiting telemetry</span><span class="tiny-dot amber"></span></div></article>
+        <article class="metric-card"><div class="metric-top"><span>Precision temperature</span><span class="sensor-tag">PT100</span></div><div class="metric-body"><div class="metric-value" id="rtd-value">—<small>°C</small></div><canvas class="spark" id="rtd-spark" aria-label="PT100 temperature trend" role="img"></canvas></div><div class="metric-bottom"><span class="metric-note" id="rtd-note">Awaiting telemetry</span><span class="tiny-dot purple"></span></div></article>
+      </section>
+
+      <div class="main-grid">
+        <section class="panel trend-panel">
+          <div class="panel-heading"><div><h2>Temperature trends</h2><p>Live sensor readings over time</p></div><div class="segmented" id="range-control" aria-label="Chart time range"><button data-range="120" class="selected" aria-pressed="true">2m</button><button data-range="600" aria-pressed="false">10m</button><button data-range="1800" aria-pressed="false">30m</button></div></div>
+          <div class="chart-wrap"><div class="axis-unit">TEMPERATURE / °C</div><canvas id="temperature-chart" role="img" aria-label="Live line graph comparing ambient, NTC and PT100 temperatures"></canvas><div class="chart-tooltip hidden" id="chart-tooltip"></div></div>
+          <div class="chart-footer"><div class="legend" id="temperature-legend"><button data-series="environment.temperature_c" class="legend-item selected" aria-pressed="true"><i class="mint"></i>Ambient</button><button data-series="thermistor-probe.temperature_c" class="legend-item selected" aria-pressed="true"><i class="amber"></i>NTC probe</button><button data-series="precision-probe.temperature_c" class="legend-item selected" aria-pressed="true"><i class="purple"></i>PT100 probe</button></div><button class="text-button" id="pause-button">Ⅱ Pause chart</button></div>
+        </section>
+
+        <section class="panel controls-panel" id="controls">
+          <div class="panel-heading"><div><h2>Output controls</h2><p>Switch outputs and verify reported state</p></div><span class="panel-icon"><svg viewBox="0 0 24 24"><path d="M12 3v9m-5-7a9 9 0 1 0 10 0"/></svg></span></div>
+          <div id="actuators" class="actuators"></div>
+          <div class="controls-note"><span class="tiny-dot" id="control-ready-dot"></span><span id="controls-note">Waiting for fresh device state</span></div>
+        </section>
+
+        <section class="panel analog-panel"><div class="panel-heading"><div><h2>Analog inputs</h2><p>Four channels · scaled engineering values</p></div><span class="subtle-pill">ADS1115</span></div><div id="analog-channels" class="analog-channels"></div></section>
+
+        <section class="panel digital-panel"><div class="panel-heading"><div><h2>Digital inputs</h2><p>Contact states & pulse counters</p></div><span class="subtle-pill">3 channels</span></div><div id="digital-inputs" class="digital-inputs"></div><div class="panel-footnote">Indicators reflect the latest received state</div></section>
+
+        <section class="panel modbus-panel" id="modbus"><div class="panel-heading"><div><h2>Modbus field devices</h2><p>Named registers from each connected slave</p></div><div class="select-wrap"><label class="sr-only" for="slave-select">Modbus slave</label><select id="slave-select"><option value="">Waiting for slaves</option></select></div></div><div class="modbus-content"><div class="modbus-chart-section"><div class="modbus-chart-title"><span id="modbus-chart-name">Select a register</span><strong id="modbus-chart-value">—</strong></div><canvas id="modbus-chart" role="img" aria-label="Selected Modbus register trend"></canvas></div><div class="registers"><div class="register-heading"><span>REGISTER</span><span>VALUE</span><span>STATUS</span></div><div id="register-list"><div class="empty-row">Waiting for register data</div></div></div></div></section>
+
+        <section class="panel activity-panel" id="activity"><div class="panel-heading"><div><h2>Activity stream <span class="live-indicator"></span></h2><p>Telemetry, commands and connection events</p></div><div class="segmented" id="activity-filter"><button class="selected" data-filter="all" aria-pressed="true">All</button><button data-filter="rx" aria-pressed="false">Received</button><button data-filter="commands" aria-pressed="false">Commands</button></div></div><div class="table-scroll"><table><thead><tr><th>TIME</th><th>EVENT</th><th>TOPIC / DETAIL</th><th>RESULT</th></tr></thead><tbody id="activity-body"><tr><td colspan="4" class="empty-row">The activity stream will appear here.</td></tr></tbody></table></div></section>
+      </div>
+      <footer class="page-footer"><span><span class="tiny-dot mint"></span> PN MASTER CONNECT <span class="footer-separator">/</span> Local operations console</span><span id="footer-transport">MQTT over TLS · server-side connection</span></footer>
+    </main>
+  </div>
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
