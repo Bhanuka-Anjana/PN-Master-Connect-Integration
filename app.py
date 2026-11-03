@@ -148,22 +148,6 @@ class DeviceStore:
         with self.lock:
             if not self.connected:
                 raise ConnectionError("MQTT is not connected")
-            suffix = "outputs" if target == "do" else "relay"
-            latest = self.latest.get(suffix)
-            if not latest or latest["retained"] or time.time() - latest["at"] > config.STALE_AFTER_S:
-                raise ConnectionError("Waiting for fresh device state before enabling controls")
-            if target == "do":
-                actual = next((item.get("active") for item in latest["payload"].get("channels", [])
-                               if item.get("channel") == channel), None)
-            else:
-                actual = latest["payload"].get("state")
-            if type(actual) is not bool:
-                raise ConnectionError("Device has not reported a valid actuator state")
-            for command in self.commands:
-                if command["target"] == target and command["channel"] == channel and command["status"] == "sent":
-                    if time.time() - command["at"] <= config.COMMAND_TIMEOUT_S:
-                        raise ConnectionError("A command for this output is still pending")
-                    command["status"] = "timeout"
             command = {"id": uuid.uuid4().hex, "target": target, "channel": channel, "state": state,
                        "label": f"DO {channel}" if target == "do" else "Relay", "at": time.time(), "status": "sent"}
             self.commands.appendleft(command)

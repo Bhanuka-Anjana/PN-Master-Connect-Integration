@@ -87,7 +87,7 @@ function render() {
   if (state.mode === "demo") {notice.className = "notice demo"; notice.textContent = "DEMO WORKSPACE · Readings and controls are simulated locally. No MQTT messages are sent.";}
   else if (!streamConnected) {notice.className = "notice"; notice.textContent = "The local server connection was interrupted. Reconnecting automatically…";}
   else if (!state.connected) {notice.className = "notice"; notice.textContent = `MQTT: ${state.connection_detail}. The console will update when the broker connects.`;}
-  else if (!state.fresh) {notice.className = "notice"; notice.textContent = "Broker connected. Waiting for fresh telemetry—run the virtual master with the same topic prefix. Controls stay disabled until device state arrives.";}
+  else if (!state.fresh) {notice.className = "notice"; notice.textContent = "Broker connected. No fresh telemetry. Output commands are available.";}
   else notice.className = "notice hidden";
   setMetric("ambient-value", env.temperature_c, "°C");
   setMetric("humidity-value", env.humidity_percent, "% RH");
@@ -108,40 +108,53 @@ function outputState(channel) {
   return channel === "relay" ? payload("relay").state : (payload("outputs").channels || []).find(item => item.channel === channel)?.active;
 }
 
+function latestCommand(channel) {
+  return state.commands.find(item => item.target === (channel === "relay" ? "relay" : "do") && item.channel === (channel === "relay" ? null : channel) && item.status !== "failed");
+}
+
+function controlState(channel) {
+  const command = latestCommand(channel);
+  const item = state.latest[channel === "relay" ? "relay" : "outputs"];
+  const actual = outputState(channel);
+  if (command && (!item || item.retained || item.at < command.at || typeof actual !== "boolean")) return command.state;
+  return actual === true;
+}
+
 function renderControls() {
-  let available = false;
+  const available = streamConnected && state.connected;
   for (const channel of [1,2,3,"relay"]) {
     const key = channel === "relay" ? "relay" : `do-${channel}`, actual = outputState(channel);
     const command = state.commands.find(item => item.target === (channel === "relay" ? "relay" : "do") && item.channel === (channel === "relay" ? null : channel));
-    const pending = command?.status === "sent" || sending.has(key);
-    const ready = fresh(channel === "relay" ? "relay" : "outputs") && typeof actual === "boolean";
+    const pending = sending.has(key);
+    const displayed = controlState(channel);
     const button = $("switch-"+key), status = $("status-"+key);
-    button.disabled = !ready || pending;
-    button.setAttribute("aria-checked", String(actual === true));
+    button.disabled = !available || pending;
+    button.setAttribute("aria-checked", String(displayed));
     button.setAttribute("aria-busy", String(pending));
-    $("icon-"+key).classList.toggle("on", actual === true && ready);
+    $("icon-"+key).classList.toggle("on", displayed);
     status.className = "actuator-status";
-    if (pending) {const desired = command?.state ?? !actual; status.textContent = `Awaiting ${desired ? "ON" : "OFF"} state…`; status.classList.add("pending");}
-    else if (command && ["timeout","failed"].includes(command.status) && state.now - command.at < 60) {status.textContent = command.status === "timeout" ? "No device confirmation" : "Command not sent"; status.classList.add("error");}
-    else if (!ready) status.textContent = typeof actual === "boolean" ? "Last state · stale" : "Waiting for state";
+    if (pending) {status.textContent = "Sending command…"; status.classList.add("pending");}
+    else if (command?.status === "failed" && state.now - command.at < 60) {status.textContent = "Command not sent"; status.classList.add("error");}
+    else if (latestCommand(channel) && (typeof actual !== "boolean" || displayed !== actual || !fresh(channel === "relay" ? "relay" : "outputs") || command?.status !== "confirmed")) status.textContent = `${displayed ? "ON" : "OFF"} requested · Unconfirmed`;
+    else if (typeof actual !== "boolean") status.textContent = "No reported state";
+    else if (!fresh(channel === "relay" ? "relay" : "outputs")) status.textContent = "Last state · stale";
     else {status.textContent = actual ? "ON · Device reported" : "OFF · Device reported"; status.classList.toggle("on", actual);}
-    available ||= ready;
   }
   $("control-ready-dot").classList.toggle("mint", available);
-  $("controls-note").textContent = available ? "Commands are confirmed by device telemetry" : "Waiting for fresh device state";
+  $("controls-note").textContent = available ? "Ready to send commands · Device state is optional" : "Waiting for broker connection";
 }
 
 async function sendControl(channel) {
   const key = channel === "relay" ? "relay" : `do-${channel}`;
   if (sending.has(key)) return;
-  const desired = !outputState(channel);
+  const desired = !controlState(channel);
   sending.add(key); renderControls();
   try {
     const response = await fetch("/api/control", {method: "POST", headers: {"Content-Type":"application/json", "X-Control-Token":state.csrf}, body: JSON.stringify({target:channel === "relay" ? "relay" : "do", channel:channel === "relay" ? null : channel, state:desired})});
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Could not send control");
     state.commands.unshift(result.command);
-    toast(`${channel === "relay" ? "Relay" : "DO " + channel} command sent. Waiting for device state.`);
+    toast(`${channel === "relay" ? "Relay" : "DO " + channel} ${desired ? "ON" : "OFF"} command sent.`);
   } catch (error) {toast(error.message || "Local server unavailable", true);}
   finally {sending.delete(key); renderControls();}
 }

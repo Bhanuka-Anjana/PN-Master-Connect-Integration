@@ -77,7 +77,7 @@ The server subscribes to `<prefix>/#` with QoS 1. Known telemetry suffixes:
 `thermistor-probe`, `precision-probe`, `modbus-values/1` through `/10`.
 Formats match the firmware serializer and the virtual master script. `relay`
 state telemetry is an extension implemented by the simulator; a physical firmware
-that does not publish it will leave this relay control unavailable.
+that does not publish it can still receive relay commands without state feedback.
 
 | Control topic | Payload |
 | --- | --- |
@@ -89,8 +89,10 @@ Commands use QoS 0, non-retained, to avoid offline command queues and replay.
 subsequent, non-retained output state changes it to `confirmed`; this is observed
 telemetry, not a correlated command ID from the firmware. No state within ten
 seconds is shown as unconfirmed/timeout. Commands are never automatically retried.
-Fresh telemetry (less than 20 seconds old) is required for each controlled output.
-Retained messages can be displayed but never enable controls or confirm commands.
+Controls are available whenever the broker is connected; device telemetry is optional.
+You can send another command immediately without waiting for device confirmation.
+Without new state feedback, switches use the last sent command to alternate ON/OFF
+and label it as unconfirmed. Retained messages never confirm commands.
 
 ## Settings
 
@@ -115,6 +117,6 @@ this application to other machines.
 
 Integration tests use a temporary localhost MQTT broker. They exercise real Paho
 subscriptions, HTTP DO/relay commands, returned device telemetry, confirmation,
-freshness/retained-message guards, validation and failed commands. They never
+commands without telemetry, retained/stale state, validation and failed commands. They never
 send controls to HiveMQ. The parser check verifies JavaScript syntax; interactive
 browser QA is a separate check.

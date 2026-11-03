@@ -33,18 +33,39 @@ class ConsoleTests(unittest.TestCase):
         self.assertFalse(state["fresh"])
         self.assertNotIn("password", state)
 
-    def test_controls_require_token_origin_fresh_state_and_correct_types(self):
+    def test_controls_require_token_origin_connection_and_correct_types(self):
         command = {"target":"do", "channel":1, "state":True}
         self.assertEqual(self.client.post("/api/control", json=command).status_code, 403)
         self.assertEqual(self.client.post("/api/control", headers=self.headers, json=command).status_code, 409)
         self.store.connection(True, "test")
-        self.ingest_outputs(retained=True)
-        self.assertEqual(self.client.post("/api/control", headers=self.headers, json=command).status_code, 409)
-        self.ingest_outputs()
         self.assertEqual(self.client.post("/api/control", headers={**self.headers,"Origin":"https://foreign.invalid"}, json=command).status_code, 403)
         for invalid in ({**command,"state":1},{**command,"channel":True},{**command,"channel":4},{**command,"target":"arbitrary/topic"}):
             self.assertEqual(self.client.post("/api/control", headers=self.headers, json=invalid).status_code, 400)
         self.bridge.send.assert_not_called()
+
+    def test_controls_allow_repeated_on_off_without_telemetry(self):
+        self.store.connection(True, "test")
+        for target, channel in (("do", 1), ("do", 2), ("do", 3), ("relay", None)):
+            for state in (True, False, True):
+                response = self.client.post("/api/control", headers=self.headers,
+                                            json={"target": target, "channel": channel, "state": state})
+                self.assertEqual(response.status_code, 202, response.json)
+                self.assertEqual(response.json["command"]["state"], state)
+        self.assertEqual(self.bridge.send.call_count, 12)
+        self.assertEqual(self.store.latest, {})
+
+    def test_controls_allow_retained_stale_or_missing_actuator_state(self):
+        self.store.connection(True, "test")
+        for kind in ("retained", "stale", "missing"):
+            with self.subTest(kind=kind):
+                self.ingest_outputs(retained=kind == "retained")
+                if kind == "stale":
+                    self.store.latest["outputs"]["at"] -= 25
+                elif kind == "missing":
+                    self.store.ingest(self.store.prefix + "/outputs", '{"channels":[]}')
+                response = self.client.post("/api/control", headers=self.headers,
+                                            json={"target": "do", "channel": 1, "state": True})
+                self.assertEqual(response.status_code, 202, response.json)
 
     def test_command_waits_for_matching_nonretained_telemetry(self):
         self.store.connection(True, "test")
@@ -77,15 +98,10 @@ class ConsoleTests(unittest.TestCase):
             self.assertFalse(self.store.ingest(self.store.prefix+"/"+suffix,body))
         self.assertEqual(self.store.message_count,0)
 
-    def test_bounded_history_and_stale_output_guard(self):
+    def test_bounded_history(self):
         for count in range(400):
             self.store.ingest(self.store.prefix+"/environment",json.dumps({"temperature_c":count}))
         self.assertEqual(len(self.store.history["environment.temperature_c"]),360)
-        self.store.connection(True,"test")
-        self.ingest_outputs()
-        self.store.latest["outputs"]["at"] -= 25
-        with self.assertRaises(ConnectionError):
-            self.store.prepare_command("do",1,True)
 
 
 def exact(connection, size):
