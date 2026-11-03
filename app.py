@@ -4,11 +4,9 @@ from __future__ import annotations
 import argparse
 from collections import deque
 import copy
-import getpass
 import json
 import logging
 import math
-import os
 import secrets
 import ssl
 import threading
@@ -348,9 +346,9 @@ def main():
     if args.demo:
         bridge = DemoBridge(store)
     else:
-        password = os.getenv("MQTT_PASSWORD") or getpass.getpass(f"MQTT password for {config.MQTT_USERNAME}: ")
+        password = config.MQTT_PASSWORD
         if not password:
-            parser.error("MQTT password is required")
+            parser.error("Set MQTT_PASSWORD in config.py before starting the console")
         bridge = MqttBridge(store, password)
     app = create_app(store, bridge)
     bridge.start()

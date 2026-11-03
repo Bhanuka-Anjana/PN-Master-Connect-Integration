@@ -12,9 +12,10 @@ Open this folder in a terminal and run:
 .\start.bat
 ```
 
+Before starting, edit `config.py` and set `MQTT_PASSWORD` to your broker password.
 The launcher creates `.venv`, installs the two Python dependencies and starts the
-server. Enter the supplied MQTT password when prompted for user **master2**.
-Passwords are not echoed, written to disk, or sent to the browser.
+server using the settings in `config.py`. Credentials stay on the Python server
+and are not sent to the browser. Keep the file private once it contains your password.
 
 Open **http://127.0.0.1:8080**. Leave the terminal running; Ctrl+C stops the server.
 Python 3.10+ is required. Alternative PowerShell launcher:
@@ -34,10 +35,10 @@ python -m venv .venv
 ## Connect the virtual master
 
 Run `tools/virtual_master.py` from the firmware repository in another terminal.
-Its default prefix matches this dashboard:
+Set its topic prefix to match `MQTT_TOPIC_PREFIX` in `config.py`:
 
 ```text
-protonest/virtual-master-001/stream/master
+protonest/gateway001/stream/master
 ```
 
 The simulator uses its existing master1 credentials; this dashboard uses master2.
@@ -96,10 +97,19 @@ and label it as unconfirmed. Retained messages never confirm commands.
 
 ## Settings
 
-Public defaults are in `config.py`: HiveMQ hostname, TLS port 8883, username
-master2 and the virtual-master prefix. Environment overrides:
-`MQTT_HOST`, `MQTT_PORT`, `MQTT_USERNAME`, `MQTT_PASSWORD`, `MQTT_TOPIC_PREFIX`.
-Set credentials only in your runtime environment; `.env` files are not loaded.
+All MQTT settings are hardcoded in `config.py`; environment variables and `.env`
+files are not read. Edit these values directly:
+
+```python
+MQTT_HOST = "eef241f4301244258e36d13dc3117297.s1.eu.hivemq.cloud"
+MQTT_PORT = 8883
+MQTT_USERNAME = "master2"
+MQTT_PASSWORD = "your-broker-password"
+MQTT_TOPIC_PREFIX = "protonest/gateway001/stream/master"
+```
+
+Use the hostname without `mqtt://` or `https://`. The topic prefix must match the
+device. Restart the server after changing settings.
 `--port 8082` changes the local HTTP port. All MQTT traffic remains server-side.
 
 The HTTP listener binds to 127.0.0.1 only. It is intended for local use, with
